@@ -25,6 +25,7 @@ import httpx
 import bittensor as bt
 
 from targon import protocol
+from requests.auth import HTTPBasicAuth
 from targon.verifier.event import EventSchema
 from targon.utils.prompt import create_prompt
 from targon.utils.misc import return_json_params
@@ -251,8 +252,12 @@ async def challenge_data( self ):
 
     
     bt.logging.info("Grabbing challenge data")
-    url = self.config.neuron.challenge_url
-    private_input = httpx.get(url).json()
+    url = self.config.neuron.challenge_url # inference data url
+
+    hotkey = self.wallet.hotkey.ss58_address # get the hotkey address
+    signature = f"0x{self.wallet.hotkey.sign(hotkey).hex()}"
+
+    private_input = httpx.get(url, auth=HTTPBasicAuth(hotkey, signature)).json()
     prompt = create_prompt(private_input)
     bt.logging.info('prompt created')
     seed = random.randint(10000, 10000000)

@@ -120,15 +120,15 @@ def verify( self, prover_output, ground_truth_output, prover_ss58 ):
     )
     return True
 
-async def handle_challenge( self, uid: int, private_input: typing.Dict, ground_truth_output: str, sampling_params: protocol.ChallengeSamplingParams ) -> typing.Tuple[bool, protocol.Challenge]:
+async def handle_inference( self, uid: int, private_input: typing.Dict, ground_truth_output: str, sampling_params: protocol.InferenceSamplingParams ) -> typing.Tuple[bool, protocol.Inference]:
     """
     Handles a inference sent to a prover and verifies the response.
 
     Parameters:
-    - uid (int): The UID of the prover being challenged.
+    - uid (int): The UID of the prover being inferenced.
 
     Returns:
-    - Tuple[bool, protocol.Challenge]: A tuple containing the verification result and the inference.
+    - Tuple[bool, protocol.Inference]: A tuple containing the verification result and the inference.
     """
 
     hotkey = self.metagraph.hotkeys[uid]
@@ -136,7 +136,7 @@ async def handle_challenge( self, uid: int, private_input: typing.Dict, ground_t
     bt.logging.trace(f"{len(keys)} stats pulled for hotkey {hotkey}")
 
     if not self.config.mock:
-        synapse = protocol.Challenge(
+        synapse = protocol.Inference(
             sources = [private_input["sources"]],
             query = private_input["query"],
             sampling_params=sampling_params,
@@ -173,7 +173,7 @@ async def handle_challenge( self, uid: int, private_input: typing.Dict, ground_t
     else:
         prompt = create_prompt(private_input)
 
-        synapse = protocol.Challenge(
+        synapse = protocol.Inference(
             sources = [private_input["sources"]],
             query = private_input["query"],
             sampling_params=sampling_params,
@@ -207,7 +207,7 @@ async def handle_challenge( self, uid: int, private_input: typing.Dict, ground_t
         )
         return verified, output_dict
 
-async def challenge_data( self ):
+async def inference_data( self ):
     """
     Orchestrates the inference process, from fetching inference data to applying rewards based on the verification results.
 
@@ -220,7 +220,7 @@ async def challenge_data( self ):
     6. Applies rewards or penalties based on the verification results.
     7. Updates the event schema with the results of the inference.
 
-    The function handles both real and mock challenges, allowing for testing without actual data.
+    The function handles both real and mock inferences, allowing for testing without actual data.
 
     Returns:
     - EventSchema: An object containing detailed information about the inference, including which UIDs were successful, the rewards applied, and other metadata.
@@ -252,20 +252,20 @@ async def challenge_data( self ):
 
     
     bt.logging.info("Grabbing inference data")
-    url = self.config.neuron.challenge_url # inference data url
+    url = self.config.neuron.inference_url # inference data url
 
     hotkey = self.wallet.hotkey.ss58_address # get the hotkey address
     signature = f"0x{self.wallet.hotkey.sign(hotkey).hex()}"
 
     private_input = httpx.get(url, auth=HTTPBasicAuth(hotkey, signature)).json()
-    bt.logging.info(f"Challenge data: {private_input}")
+    bt.logging.info(f"Inference data: {private_input}")
     prompt = create_prompt(private_input)
 
     bt.logging.info('prompt created')
     seed = random.randint(10000, 10000000)
 
 
-    sampling_params = protocol.ChallengeSamplingParams(
+    sampling_params = protocol.InferenceSamplingParams(
         seed=seed
     )
 
@@ -299,7 +299,7 @@ async def challenge_data( self ):
     bt.logging.debug(f"inference uids {uids}")
     responses = []
     for uid in uids:
-        tasks.append(asyncio.create_task(handle_challenge(self, uid, private_input, ground_truth_output_cleaned, sampling_params)))
+        tasks.append(asyncio.create_task(handle_inference(self, uid, private_input, ground_truth_output_cleaned, sampling_params)))
     responses = await asyncio.gather(*tasks)
 
 
@@ -310,7 +310,7 @@ async def challenge_data( self ):
     remove_reward_idxs = []
     for i, (verified, (response, uid)) in enumerate(responses):
         bt.logging.trace(
-            f"Challenge iteration {i} uid {uid} response {str(response.completion if not self.config.mock else response)}"
+            f"Inference iteration {i} uid {uid} response {str(response.completion if not self.config.mock else response)}"
         )
 
         hotkey = self.metagraph.hotkeys[uid]
@@ -344,7 +344,7 @@ async def challenge_data( self ):
             event.rewards.append(rewards[i].item())
 
     bt.logging.debug(
-        f"challenge_data() rewards: {rewards} | uids {uids} hotkeys {[self.metagraph.hotkeys[uid] for uid in uids]}"
+        f"inference_data() rewards: {rewards} | uids {uids} hotkeys {[self.metagraph.hotkeys[uid] for uid in uids]}"
     )
 
     event.step_length = time.time() - start_time
@@ -353,13 +353,13 @@ async def challenge_data( self ):
         bt.logging.debug(f"Received zero hashes from miners, returning event early.")
         return event
 
-    # Remove UIDs without hashes (don't punish new miners that have no challenges yet)
+    # Remove UIDs without hashes (don't punish new miners that have no inferences yet)
     uids, responses = _filter_verified_responses(uids, responses)
     bt.logging.debug(
-        f"challenge_data() full rewards: {rewards} | uids {uids} | uids to remove {remove_reward_idxs}"
+        f"inference_data() full rewards: {rewards} | uids {uids} | uids to remove {remove_reward_idxs}"
     )
     rewards = remove_indices_from_tensor(rewards, remove_reward_idxs)
-    bt.logging.debug(f"challenge_data() kept rewards: {rewards} | uids {uids}")
+    bt.logging.debug(f"inference_data() kept rewards: {rewards} | uids {uids}")
 
     bt.logging.trace("Applying inference rewards")
     apply_reward_scores(

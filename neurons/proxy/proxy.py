@@ -101,7 +101,9 @@ async def safeParseAndCall(req: Request):
     synapse = protocol.Inference(
         sources=[],
         query=prompt,
-        sampling_params=sampling_params,
+        sampling_params=protocol.InferenceSamplingParams(
+            max_new_tokens=1024,
+        ),
     )
 
     start_time = time.time()

@@ -190,9 +190,7 @@ if __name__ == "__main__":
     ch.setFormatter(CustomFormatterWithHotkey())
     log.addHandler(ch)
 
-    for log_name, log_obj in logging.Logger.manager.loggerDict.items():
-        if log_name != '__main__' or log_name != 'fastapi':
-            log_obj.disabled = True
+    logging.getLogger(bt.__name__).setLevel(logging.ERROR)
 
     wallet_name = safeEnv('PROXY_WALLET')
     wallet = bt.wallet(wallet_name)

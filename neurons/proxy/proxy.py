@@ -1,3 +1,4 @@
+import asyncio
 from time import sleep, time
 from fastapi import APIRouter, Request, responses
 import os
@@ -118,6 +119,8 @@ async def safeParseAndCall(req: Request):
                 deserialize=False,
                 streaming=True,
             ):
+                bt.logging.info(type(token))
+                await asyncio.sleep(1)
                 if isinstance(token, list):
                     res += token[0]
                     bt.logging.info(f"token: {token[0]}")
@@ -126,7 +129,6 @@ async def safeParseAndCall(req: Request):
                     res += token
                     bt.logging.info(f"token: {token}")
                     yield f"event: new_token\ndata: {token}\n\n"
-                bt.logging.info(type(token))
                 token_count += 1
 
             end_time = time.time()

@@ -157,7 +157,7 @@ if __name__ == "__main__":
     bt.logging.set_debug(True)
     bt.turn_console_on()
 
-    wallet_name = safeEnv('PROXY_WALLET ')
+    wallet_name = safeEnv('PROXY_WALLET')
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)
 

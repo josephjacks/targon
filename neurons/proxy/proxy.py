@@ -122,10 +122,10 @@ async def safeParseAndCall(req: Request):
             ):
                 if isinstance(token, list):
                     res += token[0]
-                    yield token[0]
+                    yield {"event": "new_token", "data": token[0]}
                 elif isinstance(token, str):
                     res += token
-                    yield token
+                    yield {"event": "new_token", "data": token}
                 token_count += 1
 
             end_time = time.time()

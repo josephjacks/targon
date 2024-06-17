@@ -217,5 +217,9 @@ if __name__ == "__main__":
     config = uvicorn.Config(app,loop='asyncio', host="0.0.0.0", port=int(os.getenv('PROXY_PORT', 8081)))
     server = Server(config=config)
     with server.run_in_thread():
-        pass
+        try:
+            while True:
+                time.sleep(10)
+        except Exception:
+            pass
     bt.logging.info('shutting down')

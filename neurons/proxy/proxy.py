@@ -168,6 +168,7 @@ async def testDendrite():
             max_new_tokens=1024,
         ),
     )
+    bt.logging.info(synapse.dict())
     async for token in await dendrite(
         metagraph_controller.metagraph.axons[uid],
         synapse,

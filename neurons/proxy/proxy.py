@@ -19,6 +19,7 @@ from typing import Optional
 class MetagraphNotSyncedException(Exception):
     pass
 
+
 class MetagraphController:
     def __init__(
         self, netuid: int, rest_seconds: int = 60, extra_fail_rest_seconds: int = 60
@@ -68,6 +69,7 @@ class MetagraphController:
         logging.info("Started metagraph sync thread")
         return thread
 
+
 async def api_chat_completions(
     prompt: str,
     sampling_params: protocol.InferenceSamplingParams,
@@ -89,7 +91,7 @@ async def api_chat_completions(
         token_count = 0
         uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
         res = ""
-        async for token in await dendrite( 
+        async for token in await dendrite(
             metagraph_controller.metagraph.axons[uid],
             synapse,
             deserialize=False,
@@ -134,7 +136,7 @@ async def safeParseAndCall(req: Request):
                 prompt,
                 protocol.InferenceSamplingParams(
                     max_new_tokens=data.get("max_tokens", 1024)
-                ), 
+                ),
             ),
             media_type="text/event-stream",
         )
@@ -144,8 +146,12 @@ async def safeParseAndCall(req: Request):
 
 
 if __name__ == "__main__":
-
-    dendrite = bt.dendrite()
+    wallet_name = os.getenv("PROXY_WALLET")
+    if wallet_name is None:
+        bt.logging.error("PROXY_WALLET not set")
+        exit()
+    wallet = bt.wallet(wallet_name)
+    dendrite = bt.dendrite(wallet=wallet)
 
     metagraph_controller = MetagraphController(netuid=4)
     metagraph_controller.start_sync_thread()

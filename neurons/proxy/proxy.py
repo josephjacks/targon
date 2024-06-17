@@ -13,7 +13,43 @@ from targon.verifier.inference import select_highest_n_peers
 
 import logging
 import time
-from typing import Optional
+from typing import Optional, Union
+
+def safeEnv(key: str) -> str:
+    var = os.getenv(key)
+    if var == None:
+        log.error(f"Missing env variable {key}")
+        exit()
+    return var
+
+def CustomFormatterWithHotkey(hotkey: Union[str, None] = None):
+    def fmtColor(color: str):
+        reset = "\x1b[0m"
+        if hotkey:
+            return f"%(asctime)s {color}[%(levelname)s]{reset} %(funcName)s:%(lineno)d | [{hotkey}] %(message)s"
+        return f"%(asctime)s {color}[%(levelname)s]{reset} %(funcName)s:%(lineno)d | %(message)s"
+
+    class CustomFormatter(logging.Formatter):
+        grey = "\x1b[38;20m"
+        green = "\x1b[32;20m"
+        yellow = "\x1b[33;20m"
+        red = "\x1b[31;20m"
+        bold_red = "\x1b[31;1m"
+        FORMATS = {
+            logging.DEBUG: fmtColor(grey),
+            logging.INFO: fmtColor(green),
+            logging.WARNING: fmtColor(yellow),
+            logging.ERROR: fmtColor(red),
+            logging.CRITICAL: fmtColor(bold_red),
+        }
+
+        def format(self, record):
+            log_fmt = self.FORMATS.get(record.levelno)
+            formatter = logging.Formatter(log_fmt, datefmt="%d-%m-%y %H:%M:%S")
+            return formatter.format(record)
+
+    return CustomFormatter()
+
 
 
 class MetagraphNotSyncedException(Exception):
@@ -147,12 +183,15 @@ async def safeParseAndCall(req: Request):
 
 
 if __name__ == "__main__":
-    bt.logging.on()
-    bt.logging.set_debug(True)
-    bt.turn_console_on()
+    bt.logging.off()
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    ch.setFormatter(CustomFormatterWithHotkey())
+    log.addHandler(ch)
     wallet_name = os.getenv("PROXY_WALLET")
     if wallet_name is None:
-        bt.logging.error("PROXY_WALLET not set")
+        log.error("PROXY_WALLET not set")
         exit()
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)

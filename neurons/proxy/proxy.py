@@ -184,8 +184,6 @@ async def safeParseAndCall(req: Request):
 
 
 if __name__ == "__main__":
-    bt.logging.off()
-
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
@@ -193,8 +191,7 @@ if __name__ == "__main__":
     log.addHandler(ch)
 
     for log_name, log_obj in logging.Logger.manager.loggerDict.items():
-        if log_name != '<module name>':
-            print(log_name)
+        if log_name != '__main__' or log_name != 'fastapi':
             log_obj.disabled = True
 
     wallet_name = safeEnv('PROXY_WALLET')

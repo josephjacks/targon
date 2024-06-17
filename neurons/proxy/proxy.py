@@ -2,8 +2,8 @@ from time import time
 from sse_starlette.sse import EventSourceResponse
 from fastapi import Request
 import os
-from bittensor import typing, logging, 
-from bittensor import subtensor as Subtensor, dendrite as Dendrite
+import bittensor as bt
+import typing
 from dotenv import load_dotenv
 from bittensor.axon import FastAPI, uvicorn
 
@@ -28,14 +28,14 @@ class MetagraphController:
         self.is_syncing = False
         self.rest_seconds = rest_seconds
         self.extra_fail_rest_seconds = extra_fail_rest_seconds
-        self.metagraph: Optional[Subtensor.metagraph] = None
+        self.metagraph: Optional[bt.metagraph] = None
 
     def sync(self):
-        subtensor = Subtensor()
+        subtensor = bt.subtensor()
         self.is_syncing = True
         try:
             sync_start = time.time()
-            metagraph: metagraph = subtensor.metagraph(netuid=self.netuid)
+            metagraph: bt.metagraph = subtensor.metagraph(netuid=self.netuid)
             self.metagraph = metagraph
             self.last_sync_success = time.time()
             logging.info(
@@ -57,7 +57,7 @@ class MetagraphController:
             while True:
                 try:
                     self.sync()
-                except Exception as e:
+                except Exception:
                     time.sleep(self.extra_fail_rest_seconds)
                 time.sleep(self.rest_seconds)
 
@@ -85,7 +85,7 @@ async def api_chat_completions(
             sampling_params=sampling_params,
         )
 
-        start_time = time()
+        start_time = time.time()
         token_count = 0
         uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
         res = ""
@@ -104,7 +104,7 @@ async def api_chat_completions(
                 yield token
             token_count += 1
 
-        end_time = time()
+        end_time = time.time()
         elapsed_time = end_time - start_time
         tokens_per_second = token_count / elapsed_time
         logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
@@ -145,7 +145,7 @@ async def safeParseAndCall(req: Request):
 
 if __name__ == "__main__":
 
-    dendrite = Dendrite()
+    dendrite = bt.dendrite()
 
     metagraph_controller = MetagraphController(netuid=4)
     metagraph_controller.start_sync_thread()

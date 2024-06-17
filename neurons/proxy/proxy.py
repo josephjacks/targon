@@ -113,6 +113,7 @@ async def safeParseAndCall(req: Request):
             token_count = 0
             uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
             res = ""
+            yield {"event": "new_token", "data": "FIRST TOKEN"}
             async for token in await dendrite(
                 metagraph_controller.metagraph.axons[uid],
                 synapse,

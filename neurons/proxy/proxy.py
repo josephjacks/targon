@@ -1,3 +1,4 @@
+import asyncio
 from multiprocessing import Process
 from time import sleep, time
 import threading
@@ -187,6 +188,8 @@ class Server(uvicorn.Server):
     def run_in_thread(self):
         thread = threading.Thread(target=self.run)
         thread.start()
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         try:
             while not self.started:
                 time.sleep(1e-3)

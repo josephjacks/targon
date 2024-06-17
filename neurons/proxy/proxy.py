@@ -186,10 +186,10 @@ class Server(uvicorn.Server):
 
     @contextlib.contextmanager
     def run_in_thread(self):
-        thread = threading.Thread(target=self.run)
-        thread.start()
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        thread = threading.Thread(target=self.run)
+        thread.start()
         try:
             while not self.started:
                 time.sleep(1e-3)
@@ -214,7 +214,7 @@ if __name__ == "__main__":
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Proxy")
-    config = uvicorn.Config(app, host="0.0.0.0", port=int(os.getenv('PROXY_PORT', 8081)))
+    config = uvicorn.Config(app,loop='asyncio', host="0.0.0.0", port=int(os.getenv('PROXY_PORT', 8081)))
     server = Server(config=config)
     with server.run_in_thread():
         pass

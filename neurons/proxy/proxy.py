@@ -1,4 +1,4 @@
-from time import time
+from time import sleep, time
 from sse_starlette.sse import EventSourceResponse
 from fastapi import APIRouter, Request
 import os
@@ -14,12 +14,14 @@ from targon.verifier.inference import select_highest_n_peers
 import time
 from typing import Optional, Union
 
+
 def safeEnv(key: str) -> str:
     var = os.getenv(key)
     if var == None:
         bt.logging.error(f"Missing env variable {key}")
         exit()
     return var
+
 
 class MetagraphNotSyncedException(Exception):
     pass
@@ -101,8 +103,7 @@ async def api_chat_completions(
             metagraph_controller.metagraph.axons[uid],
             synapse,
             deserialize=False,
-            run_async=False,
-            streaming=False,
+            streaming=True,
         ):
             if isinstance(token, list):
                 res += token[0]
@@ -125,6 +126,7 @@ load_dotenv()
 TOKEN = os.getenv("HUB_SECRET_TOKEN")
 
 router = APIRouter()
+
 
 @router.post("/api/chat/completions")
 async def safeParseAndCall(req: Request):
@@ -161,12 +163,33 @@ if __name__ == "__main__":
     bt.logging.set_trace(True)
     bt.turn_console_on()
 
-    wallet_name = safeEnv('PROXY_WALLET')
+    wallet_name = safeEnv("PROXY_WALLET")
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)
-
     metagraph_controller = MetagraphController(netuid=4)
     metagraph_controller.start_sync_thread()
+    sleep(5)
+
+    uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
+    res = ""
+    synapse = protocol.Inference(
+        sources=[],
+        query="what is the x y problem",
+        sampling_params=protocol.InferenceSamplingParams(
+            max_new_tokens=1024,
+        ),
+    )
+    for token in dendrite(
+        metagraph_controller.metagraph.axons[uid],
+        synapse,
+        deserialize=False,
+        streaming=True,
+    ):
+        if isinstance(token, list):
+            res += token[0]
+        elif isinstance(token, str):
+            res += token
+    bt.logging.info(res)
 
     app = FastAPI()
     app.include_router(router)

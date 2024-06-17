@@ -97,52 +97,36 @@ async def safeParseAndCall(req: Request):
         return "", 403
     prompt = "\n".join([p["role"] + ": " + p["content"] for p in messages])
 
-    async def api_chat_completions(
-        prompt: str,
-        sampling_params: protocol.InferenceSamplingParams,
-    ):
-        try:
-            synapse = protocol.Inference(
-                sources=[],
-                query=prompt,
-                sampling_params=sampling_params,
-            )
-
-            start_time = time.time()
-            token_count = 0
-            uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
-            res = ""
-            async for token in await dendrite(
-                metagraph_controller.metagraph.axons[uid],
-                synapse,
-                deserialize=False,
-                streaming=True,
-            ):
-                if isinstance(token, list):
-                    res += token[0]
-                    bt.logging.info(f"token: {token[0]}")
-                    yield token[0]
-                elif isinstance(token, str):
-                    res += token
-                    bt.logging.info(f"token: {token}")
-                    yield token
-                token_count += 1
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            tokens_per_second = token_count / elapsed_time
-            bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
-            bt.logging.info(f"{res} | {token_count}")
-        except Exception as e:
-            bt.logging.error(e)
-
-    res = ""
-    async for token in api_chat_completions(
-        prompt,
-        protocol.InferenceSamplingParams(
-            max_new_tokens=int(data.get("max_tokens", 1024))
+    synapse = protocol.Inference(
+        sources=[],
+        query=prompt,
+        sampling_params=protocol.InferenceSamplingParams(
+            max_new_tokens=1024,
         ),
+    )
+
+    start_time = time.time()
+    token_count = 0
+    uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
+    res = ""
+    async for token in await dendrite(
+        metagraph_controller.metagraph.axons[uid],
+        synapse,
+        deserialize=False,
+        streaming=True,
     ):
-        res += token
+        if isinstance(token, list):
+            res += token[0]
+            bt.logging.info(f"token: {token[0]}")
+        elif isinstance(token, str):
+            res += token
+            bt.logging.info(f"token: {token}")
+        token_count += 1
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    tokens_per_second = token_count / elapsed_time
+    bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
+    bt.logging.info(f"{res} | {token_count}")
     return res
 
 

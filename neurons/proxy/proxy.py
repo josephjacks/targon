@@ -155,6 +155,7 @@ async def safeParseAndCall(req: Request):
 if __name__ == "__main__":
     bt.logging.on()
     bt.logging.set_debug(True)
+    bt.logging.set_trace(True)
     bt.turn_console_on()
 
     wallet_name = safeEnv('PROXY_WALLET')

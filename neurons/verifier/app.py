@@ -91,14 +91,17 @@ class Verifier(BaseVerifierNeuron):
             self.app.router.add_api_route(
                 "/api/chat/completions", self.safeParseAndCall, methods=["POST"]
             )
-            self.fast_config = uvicorn.Config(
-                self.app,
-                host="0.0.0.0",
-                port=self.config.neuron.proxy.port,
-                loop="asyncio",
+            self.fast_server = Process(
+                target=uvicorn.run,
+                args={
+                    "app": self.app,
+                    "host": "0.0.0.0",
+                    "loop": "asyncio",
+                    "port": self.config.neuron.proxy.port,
+                },
+                daemon=True,
             )
-            self.fast_server = Process(target=uvicorn.run, args=[self.fast_config], daemon=True)
-            self.fast_server.start() 
+            self.fast_server.start()
 
         self.last_interval_block = self.get_last_adjustment_block()
         self.adjustment_interval = self.get_adjustment_interval()

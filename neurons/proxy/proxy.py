@@ -187,10 +187,9 @@ if __name__ == "__main__":
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
+    log.handlers.clear()
     ch.setFormatter(CustomFormatterWithHotkey())
     log.addHandler(ch)
-
-    logging.getLogger(bt.__name__).setLevel(logging.ERROR)
 
     wallet_name = safeEnv('PROXY_WALLET')
     wallet = bt.wallet(wallet_name)

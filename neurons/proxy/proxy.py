@@ -134,15 +134,15 @@ async def safeParseAndCall(req: Request):
         except Exception as e:
             bt.logging.error(e)
 
-    return responses.StreamingResponse(
-        api_chat_completions(
-            prompt,
-            protocol.InferenceSamplingParams(
-                max_new_tokens=int(data.get("max_tokens", 1024))
-            ),
+    res = ""
+    async for token in api_chat_completions(
+        prompt,
+        protocol.InferenceSamplingParams(
+            max_new_tokens=int(data.get("max_tokens", 1024))
         ),
-        media_type="text/event-stream",
-    )
+    ):
+        res += token
+    return res
 
 
 async def testDendrite():
@@ -184,5 +184,5 @@ if __name__ == "__main__":
         sleep(1)
     app = FastAPI()
     app.include_router(router)
-    bt.logging.info("Starting Prxy")
+    bt.logging.info("Starting Proxy")
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081)))

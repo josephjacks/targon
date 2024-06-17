@@ -97,7 +97,7 @@ class Verifier(BaseVerifierNeuron):
                 port=self.config.neuron.proxy.port,
                 loop="asyncio",
             )
-            self.fast_server = Process(target=uvicorn.run, args=([self.fast_config]), daemon=True)
+            self.fast_server = Process(target=uvicorn.run, args=[self.fast_config], daemon=True)
             self.fast_server.start() 
 
         self.last_interval_block = self.get_last_adjustment_block()

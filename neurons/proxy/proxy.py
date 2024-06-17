@@ -119,8 +119,7 @@ async def safeParseAndCall(req: Request):
                 deserialize=False,
                 streaming=True,
             ):
-                bt.logging.info(type(token))
-                await asyncio.sleep(1)
+                yield f"event: new_token\ndata: bla\n\n"
                 if isinstance(token, list):
                     res += token[0]
                     bt.logging.info(f"token: {token[0]}")

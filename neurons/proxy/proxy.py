@@ -78,51 +78,6 @@ class MetagraphController:
         return thread
 
 
-async def api_chat_completions(
-    prompt: str,
-    sampling_params: protocol.InferenceSamplingParams,
-) -> typing.Tuple[bool, protocol.Inference]:
-    """
-    Handles a inference sent to a prover and verifies the response.
-
-    Returns:
-    - Tuple[bool, protocol.Inference]: A tuple containing the verification result and the inference.
-    """
-    try:
-        synapse = protocol.Inference(
-            sources=[],
-            query=prompt,
-            sampling_params=sampling_params,
-        )
-
-        start_time = time.time()
-        token_count = 0
-        uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
-        res = ""
-        bt.logging.info(synapse.dict())
-        async for token in await dendrite(
-            metagraph_controller.metagraph.axons[uid],
-            synapse,
-            deserialize=False,
-            streaming=True,
-        ):
-            if isinstance(token, list):
-                res += token[0]
-                yield token[0]
-            elif isinstance(token, str):
-                res += token
-                yield token
-            token_count += 1
-
-        end_time = time.time()
-        elapsed_time = end_time - start_time
-        tokens_per_second = token_count / elapsed_time
-        bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
-        bt.logging.info(f"{res} | {token_count}")
-    except Exception as e:
-        bt.logging.error(e)
-
-
 load_dotenv()
 TOKEN = os.getenv("HUB_SECRET_TOKEN")
 
@@ -143,19 +98,53 @@ async def safeParseAndCall(req: Request):
         return "", 403
     prompt = "\n".join([p["role"] + ": " + p["content"] for p in messages])
 
-    try:
-        return EventSourceResponse(
-            api_chat_completions(
-                prompt,
-                protocol.InferenceSamplingParams(
-                    max_new_tokens=data.get("max_tokens", 1024)
-                ),
+    async def api_chat_completions(
+        prompt: str,
+        sampling_params: protocol.InferenceSamplingParams,
+    ):
+        try:
+            synapse = protocol.Inference(
+                sources=[],
+                query=prompt,
+                sampling_params=sampling_params,
+            )
+
+            start_time = time.time()
+            token_count = 0
+            uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
+            res = ""
+            bt.logging.info(synapse.dict())
+            async for token in await dendrite(
+                metagraph_controller.metagraph.axons[uid],
+                synapse,
+                deserialize=False,
+                streaming=True,
+            ):
+                if isinstance(token, list):
+                    res += token[0]
+                    yield token[0]
+                elif isinstance(token, str):
+                    res += token
+                    yield token
+                token_count += 1
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            tokens_per_second = token_count / elapsed_time
+            bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
+            bt.logging.info(f"{res} | {token_count}")
+        except Exception as e:
+            bt.logging.error(e)
+
+    return EventSourceResponse(
+        api_chat_completions(
+            prompt,
+            protocol.InferenceSamplingParams(
+                max_new_tokens=data.get("max_tokens", 1024)
             ),
-            media_type="text/event-stream",
-        )
-    except Exception as e:
-        bt.logging.error(f"Failed due to: {e}")
-        return "", 500
+        ),
+        media_type="text/event-stream",
+    )
 
 
 async def testDendrite():
@@ -195,7 +184,6 @@ if __name__ == "__main__":
     metagraph_controller.start_sync_thread()
     while metagraph_controller.metagraph is None:
         sleep(1)
-    asyncio.run(testDendrite())
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Prxy")

@@ -15,12 +15,14 @@ import logging
 import time
 from typing import Optional, Union
 
+
 def safeEnv(key: str) -> str:
     var = os.getenv(key)
     if var == None:
         log.error(f"Missing env variable {key}")
         exit()
     return var
+
 
 def CustomFormatterWithHotkey(hotkey: Union[str, None] = None):
     def fmtColor(color: str):
@@ -49,7 +51,6 @@ def CustomFormatterWithHotkey(hotkey: Union[str, None] = None):
             return formatter.format(record)
 
     return CustomFormatter()
-
 
 
 class MetagraphNotSyncedException(Exception):
@@ -184,14 +185,7 @@ async def safeParseAndCall(req: Request):
 
 
 if __name__ == "__main__":
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    log.handlers.clear()
-    ch.setFormatter(CustomFormatterWithHotkey())
-    log.addHandler(ch)
-
-    wallet_name = safeEnv('PROXY_WALLET')
+    wallet_name = safeEnv("PROXY_WALLET")
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)
 
@@ -202,6 +196,15 @@ if __name__ == "__main__":
     app.router.add_api_route(
         "/api/chat/completions", safeParseAndCall, methods=["POST"]
     )
+
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.DEBUG)
+    ch = logging.StreamHandler()
+    log.handlers.clear()
+    for l in log.getChildren():
+        l.disabled = True
+    ch.setFormatter(CustomFormatterWithHotkey())
+    log.addHandler(ch)
     log.info("Starting Proxy")
     uvicorn.run(
         app, host="0.0.0.0", loop="asyncio", port=int(os.getenv("PROXY_PORT", 8081))

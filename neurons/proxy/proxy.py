@@ -124,11 +124,11 @@ async def safeParseAndCall(req: Request):
                 if isinstance(token, list):
                     res += token[0]
                     bt.logging.info(f"token: {token[0]}")
-                    yield f"event: new_token\ndata: { token[0] }\n\n"
+                    yield f"event: new_token\ndata: bla\n\n"
                 elif isinstance(token, str):
                     res += token
                     bt.logging.info(f"token: {token}")
-                    yield f"event: new_token\ndata: {token}\n\n"
+                    yield f"event: new_token\ndata: bla\n\n"
                 token_count += 1
 
             end_time = time.time()

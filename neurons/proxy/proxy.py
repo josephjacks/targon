@@ -1,7 +1,5 @@
-import asyncio
 from time import sleep, time
-from sse_starlette.sse import EventSourceResponse
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, responses
 import os
 import bittensor as bt
 import typing
@@ -98,42 +96,56 @@ async def safeParseAndCall(req: Request):
         return "", 403
     prompt = "\n".join([p["role"] + ": " + p["content"] for p in messages])
 
-    synapse = protocol.Inference(
-        sources=[],
-        query=prompt,
-        sampling_params=protocol.InferenceSamplingParams(
-            max_new_tokens=1024,
-        ),
-    )
-
-    start_time = time.time()
-    token_count = 0
-    uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
-    res = ""
-    #yield {"event": "new_token", "data": "FIRST TOKEN"}
-    async for token in await dendrite(
-        metagraph_controller.metagraph.axons[uid],
-        synapse,
-        deserialize=False,
-        streaming=True,
+    async def api_chat_completions(
+        prompt: str,
+        sampling_params: protocol.InferenceSamplingParams,
     ):
-        if isinstance(token, list):
-            res += token[0]
-            bt.logging.info(f"token: {token[0]}")
-            #yield {"event": "new_token", "data": token[0]}
-        elif isinstance(token, str):
-            res += token
-            bt.logging.info(f"token: {token}")
-            #yield {"event": "new_token", "data": token}
-        token_count += 1
+        try:
+            synapse = protocol.Inference(
+                sources=[],
+                query=prompt,
+                sampling_params=sampling_params,
+            )
 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    tokens_per_second = token_count / elapsed_time
-    bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
-    bt.logging.info(f"{res} | {token_count}")
-    return 200, res
+            start_time = time.time()
+            token_count = 0
+            uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
+            res = ""
+            yield f"event: new_token\ndata: first token\n\n"
+            async for token in await dendrite(
+                metagraph_controller.metagraph.axons[uid],
+                synapse,
+                deserialize=False,
+                streaming=True,
+            ):
+                if isinstance(token, list):
+                    res += token[0]
+                    bt.logging.info(f"token: {token[0]}")
+                    yield f"event: new_token\ndata: { token[0] }\n\n"
+                elif isinstance(token, str):
+                    res += token
+                    bt.logging.info(f"token: {token}")
+                    yield f"event: new_token\ndata: {token}\n\n"
+                bt.logging.info(type(token))
+                token_count += 1
 
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            tokens_per_second = token_count / elapsed_time
+            bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
+            bt.logging.info(f"{res} | {token_count}")
+        except Exception as e:
+            bt.logging.error(e)
+
+    return responses.StreamingResponse(
+        api_chat_completions(
+            prompt,
+            protocol.InferenceSamplingParams(
+                max_new_tokens=int(data.get("max_tokens", 1024))
+            ),
+        ),
+        media_type="text/event-stream",
+    )
 
 
 async def testDendrite():
@@ -176,6 +188,4 @@ if __name__ == "__main__":
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Prxy")
-    uvicorn.run(
-        app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081))
-    )
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081)))

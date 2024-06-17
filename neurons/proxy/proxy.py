@@ -1,3 +1,4 @@
+import asyncio
 from time import sleep, time
 from sse_starlette.sse import EventSourceResponse
 from fastapi import APIRouter, Request
@@ -157,6 +158,29 @@ async def safeParseAndCall(req: Request):
         return "", 500
 
 
+async def testDendrite():
+    uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
+    res = ""
+    synapse = protocol.Inference(
+        sources=[],
+        query="what is the x y problem",
+        sampling_params=protocol.InferenceSamplingParams(
+            max_new_tokens=1024,
+        ),
+    )
+    async for token in await dendrite(
+        metagraph_controller.metagraph.axons[uid],
+        synapse,
+        deserialize=False,
+        streaming=True,
+    ):
+        if isinstance(token, list):
+            res += token[0]
+        elif isinstance(token, str):
+            res += token
+    bt.logging.info(res)
+
+
 if __name__ == "__main__":
     bt.logging.on()
     bt.logging.set_debug(True)
@@ -170,28 +194,7 @@ if __name__ == "__main__":
     metagraph_controller.start_sync_thread()
     while metagraph_controller.metagraph is None:
         sleep(1)
-
-    uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
-    res = ""
-    synapse = protocol.Inference(
-        sources=[],
-        query="what is the x y problem",
-        sampling_params=protocol.InferenceSamplingParams(
-            max_new_tokens=1024,
-        ),
-    )
-    for token in dendrite(
-        metagraph_controller.metagraph.axons[uid],
-        synapse,
-        deserialize=False,
-        streaming=True,
-    ):
-        if isinstance(token, list):
-            res += token[0]
-        elif isinstance(token, str):
-            res += token
-    bt.logging.info(res)
-
+    asyncio.run(testDendrite())
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Prxy")

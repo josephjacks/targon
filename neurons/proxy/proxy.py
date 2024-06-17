@@ -122,6 +122,7 @@ TOKEN = os.getenv("HUB_SECRET_TOKEN")
 async def safeParseAndCall(req: Request):
     data = await req.json()
     if data.get("api_key") != TOKEN and TOKEN is not None:
+        logging.warning("Unverified request")
         return "", 401
 
     logging.info("Received organic request")
@@ -146,6 +147,9 @@ async def safeParseAndCall(req: Request):
 
 
 if __name__ == "__main__":
+    bt.logging.on()
+    bt.logging.set_debug(True)
+    bt.turn_console_on()
     wallet_name = os.getenv("PROXY_WALLET")
     if wallet_name is None:
         bt.logging.error("PROXY_WALLET not set")

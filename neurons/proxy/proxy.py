@@ -1,7 +1,9 @@
 from multiprocessing import Process
 from time import sleep, time
+import threading
 from fastapi import APIRouter, Request
 import os
+import contextlib
 import bittensor as bt
 from dotenv import load_dotenv
 from bittensor.axon import FastAPI, uvicorn
@@ -177,6 +179,21 @@ async def testWrapper():
     async for token in testDendrite():
         bt.logging.info(token)
 
+class Server(uvicorn.Server):
+    def install_signal_handlers(self):
+        pass
+
+    @contextlib.contextmanager
+    def run_in_thread(self):
+        thread = threading.Thread(target=self.run)
+        thread.start()
+        try:
+            while not self.started:
+                time.sleep(1e-3)
+            yield
+        finally:
+            self.should_exit = True
+            thread.join()
 
 if __name__ == "__main__":
     bt.logging.on()
@@ -194,16 +211,8 @@ if __name__ == "__main__":
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Proxy")
-    fast_server = Process(
-        target=uvicorn.run,
-        args=[
-            app,
-        ],
-        kwargs={
-            "host": "0.0.0.0",
-            "loop": "asyncio",
-            "port": os.getenv("PROXY_PORT", 8081),
-        },
-        daemon=True,
-    )
-    fast_server.start()
+    config = uvicorn.Config(app, host="0.0.0.0", port=int(os.getenv('PROXY_PORT', 8081)))
+    server = Server(config=config)
+    with server.run_in_thread():
+        pass
+    bt.logging.info('shutting down')

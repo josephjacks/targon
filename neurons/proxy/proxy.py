@@ -168,7 +168,8 @@ if __name__ == "__main__":
     dendrite = bt.dendrite(wallet=wallet)
     metagraph_controller = MetagraphController(netuid=4)
     metagraph_controller.start_sync_thread()
-    sleep(5)
+    while metagraph_controller.metagraph is None:
+        sleep(1)
 
     uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
     res = ""

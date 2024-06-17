@@ -121,11 +121,12 @@ async def safeParseAndCall(req: Request):
                 if isinstance(token, list):
                     res += token[0]
                     bt.logging.info(f"token: {token[0]}")
+                    yield token[0]
                 elif isinstance(token, str):
                     res += token
                     bt.logging.info(f"token: {token}")
+                    yield token
                 token_count += 1
-            yield f"event: new_token\ndata: {res}\n\n"
             end_time = time.time()
             elapsed_time = end_time - start_time
             tokens_per_second = token_count / elapsed_time

@@ -101,7 +101,7 @@ async def api_chat_completions(
             synapse,
             deserialize=False,
             run_async=False,
-            streaming=True,
+            streaming=False,
         ):
             if isinstance(token, list):
                 res += token[0]

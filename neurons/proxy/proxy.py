@@ -149,10 +149,14 @@ async def testDendrite():
     ):
         if isinstance(token, list):
             res += token[0]
+            yield token[0]
         elif isinstance(token, str):
             res += token
-    bt.logging.info(res)
+            yield token
 
+async def testWrapper():
+    async for token in testDendrite():
+        bt.logging.info(token)
 
 if __name__ == "__main__":
     bt.logging.on()
@@ -167,6 +171,7 @@ if __name__ == "__main__":
     metagraph_controller.start_sync_thread()
     while metagraph_controller.metagraph is None:
         sleep(1)
+    res = asyncio.run(testWrapper())
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Proxy")

@@ -96,6 +96,7 @@ async def api_chat_completions(
         token_count = 0
         uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
         res = ""
+        bt.logging.info(synapse.dict())
         async for token in await dendrite(
             metagraph_controller.metagraph.axons[uid],
             synapse,

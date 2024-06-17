@@ -191,7 +191,7 @@ if __name__ == "__main__":
     ch.setFormatter(CustomFormatterWithHotkey())
     log.addHandler(ch)
 
-    wallet_name = safeEnv('PROXY_WALLET ')
+    wallet_name = safeEnv('PROXY_WALLET')
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)
 

@@ -156,6 +156,7 @@ TOKEN = os.getenv("HUB_SECRET_TOKEN")
 
 
 async def safeParseAndCall(req: Request):
+    log.info("New request")
     data = await req.json()
     if data.get("api_key") != TOKEN and TOKEN is not None:
         logging.warning("Unverified request")
@@ -189,10 +190,8 @@ if __name__ == "__main__":
     ch = logging.StreamHandler()
     ch.setFormatter(CustomFormatterWithHotkey())
     log.addHandler(ch)
-    wallet_name = os.getenv("PROXY_WALLET")
-    if wallet_name is None:
-        log.error("PROXY_WALLET not set")
-        exit()
+
+    wallet_name = safeEnv('PROXY_WALLET ')
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)
 
@@ -203,6 +202,7 @@ if __name__ == "__main__":
     app.router.add_api_route(
         "/api/chat/completions", safeParseAndCall, methods=["POST"]
     )
+    log.info("Starting Proxy")
     uvicorn.run(
         app, host="0.0.0.0", loop="asyncio", port=int(os.getenv("PROXY_PORT", 8081))
     )

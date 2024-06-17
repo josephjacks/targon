@@ -93,8 +93,10 @@ class Verifier(BaseVerifierNeuron):
             )
             self.fast_server = Process(
                 target=uvicorn.run,
-                args={
-                    "app": self.app,
+                args=[
+                    self.app,
+                ],
+                kwargs={
                     "host": "0.0.0.0",
                     "loop": "asyncio",
                     "port": self.config.neuron.proxy.port,

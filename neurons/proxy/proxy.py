@@ -11,47 +11,15 @@ from targon import protocol
 from targon.verifier.inference import select_highest_n_peers
 
 
-import logging
 import time
 from typing import Optional, Union
-
 
 def safeEnv(key: str) -> str:
     var = os.getenv(key)
     if var == None:
-        log.error(f"Missing env variable {key}")
+        bt.logging.error(f"Missing env variable {key}")
         exit()
     return var
-
-
-def CustomFormatterWithHotkey(hotkey: Union[str, None] = None):
-    def fmtColor(color: str):
-        reset = "\x1b[0m"
-        if hotkey:
-            return f"%(asctime)s {color}[%(levelname)s]{reset} %(funcName)s:%(lineno)d | [{hotkey}] %(message)s"
-        return f"%(asctime)s {color}[%(levelname)s]{reset} %(funcName)s:%(lineno)d | %(message)s"
-
-    class CustomFormatter(logging.Formatter):
-        grey = "\x1b[38;20m"
-        green = "\x1b[32;20m"
-        yellow = "\x1b[33;20m"
-        red = "\x1b[31;20m"
-        bold_red = "\x1b[31;1m"
-        FORMATS = {
-            logging.DEBUG: fmtColor(grey),
-            logging.INFO: fmtColor(green),
-            logging.WARNING: fmtColor(yellow),
-            logging.ERROR: fmtColor(red),
-            logging.CRITICAL: fmtColor(bold_red),
-        }
-
-        def format(self, record):
-            log_fmt = self.FORMATS.get(record.levelno)
-            formatter = logging.Formatter(log_fmt, datefmt="%d-%m-%y %H:%M:%S")
-            return formatter.format(record)
-
-    return CustomFormatter()
-
 
 class MetagraphNotSyncedException(Exception):
     pass
@@ -76,12 +44,12 @@ class MetagraphController:
             metagraph: bt.metagraph = subtensor.metagraph(netuid=self.netuid)
             self.metagraph = metagraph
             self.last_sync_success = time.time()
-            logging.info(
+            bt.logging.info(
                 f"Synced metagraph for netuid {self.netuid} (took {self.last_sync_success - sync_start:.2f} seconds)",
             )
             return metagraph
         except Exception as e:
-            logging.warning("Could not sync metagraph: ", e)
+            bt.logging.warning("Could not sync metagraph: ", e)
             raise e  # Reraise the exception to be handled by the caller
         finally:
             self.is_syncing = False
@@ -103,7 +71,7 @@ class MetagraphController:
 
         thread = threading.Thread(target=loop, daemon=True)
         thread.start()
-        logging.info("Started metagraph sync thread")
+        bt.logging.info("Started metagraph sync thread")
         return thread
 
 
@@ -146,10 +114,10 @@ async def api_chat_completions(
         end_time = time.time()
         elapsed_time = end_time - start_time
         tokens_per_second = token_count / elapsed_time
-        logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
-        logging.info(f"{res} | {token_count}")
+        bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
+        bt.logging.info(f"{res} | {token_count}")
     except Exception as e:
-        logging.error(e)
+        bt.logging.error(e)
 
 
 load_dotenv()
@@ -157,13 +125,13 @@ TOKEN = os.getenv("HUB_SECRET_TOKEN")
 
 
 async def safeParseAndCall(req: Request):
-    log.info("New request")
+    bt.logging.info("New Parse Request")
     data = await req.json()
     if data.get("api_key") != TOKEN and TOKEN is not None:
-        logging.warning("Unverified request")
+        bt.logging.warning("Unverified request")
         return "", 401
 
-    logging.info("Received organic request")
+    bt.logging.info("Received organic request")
     messages = data.get("messages")
     if not isinstance(messages, list):
         return "", 403
@@ -180,12 +148,16 @@ async def safeParseAndCall(req: Request):
             media_type="text/event-stream",
         )
     except Exception as e:
-        logging.error(f"Failed due to: {e}")
+        bt.logging.error(f"Failed due to: {e}")
         return "", 500
 
 
 if __name__ == "__main__":
-    wallet_name = safeEnv("PROXY_WALLET")
+    bt.logging.on()
+    bt.logging.set_debug(True)
+    bt.turn_console_on()
+
+    wallet_name = safeEnv('PROXY_WALLET ')
     wallet = bt.wallet(wallet_name)
     dendrite = bt.dendrite(wallet=wallet)
 
@@ -196,16 +168,7 @@ if __name__ == "__main__":
     app.router.add_api_route(
         "/api/chat/completions", safeParseAndCall, methods=["POST"]
     )
-
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-    ch = logging.StreamHandler()
-    log.handlers.clear()
-    for l in log.getChildren():
-        l.disabled = True
-    ch.setFormatter(CustomFormatterWithHotkey())
-    log.addHandler(ch)
-    log.info("Starting Proxy")
+    bt.logging.info("Starting Prxy")
     uvicorn.run(
         app, host="0.0.0.0", loop="asyncio", port=int(os.getenv("PROXY_PORT", 8081))
     )

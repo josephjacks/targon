@@ -1,6 +1,6 @@
 from time import time
 from sse_starlette.sse import EventSourceResponse
-from fastapi import Request
+from fastapi import APIRouter, Request
 import os
 import bittensor as bt
 import typing
@@ -123,7 +123,9 @@ async def api_chat_completions(
 load_dotenv()
 TOKEN = os.getenv("HUB_SECRET_TOKEN")
 
+router = APIRouter()
 
+@router.post("/api/chat/completions")
 async def safeParseAndCall(req: Request):
     bt.logging.info("New Parse Request")
     data = await req.json()
@@ -166,9 +168,7 @@ if __name__ == "__main__":
     metagraph_controller.start_sync_thread()
 
     app = FastAPI()
-    app.router.add_api_route(
-        "/api/chat/completions", safeParseAndCall, methods=["POST"]
-    )
+    app.include_router(router)
     bt.logging.info("Starting Prxy")
     uvicorn.run(
         app, host="0.0.0.0", loop="asyncio", port=int(os.getenv("PROXY_PORT", 8081))

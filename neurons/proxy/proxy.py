@@ -113,7 +113,6 @@ async def safeParseAndCall(req: Request):
             token_count = 0
             uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
             res = ""
-            bt.logging.info(synapse.dict())
             async for token in await dendrite(
                 metagraph_controller.metagraph.axons[uid],
                 synapse,
@@ -122,9 +121,11 @@ async def safeParseAndCall(req: Request):
             ):
                 if isinstance(token, list):
                     res += token[0]
+                    bt.logging.info(f"token: {token[0]}")
                     yield {"event": "new_token", "data": token[0]}
                 elif isinstance(token, str):
                     res += token
+                    bt.logging.info(f"token: {token}")
                     yield {"event": "new_token", "data": token}
                 token_count += 1
 

@@ -140,6 +140,12 @@ async def safeParseAndCall(req: Request):
         except Exception as e:
             bt.logging.error(e)
 
+    async for token in api_chat_completions(
+        prompt,
+        protocol.InferenceSamplingParams(max_new_tokens=data.get("max_tokens", 1024)),
+    ):
+        bt.logging.info(token)
+    return ""
     return EventSourceResponse(
         api_chat_completions(
             prompt,
@@ -180,6 +186,7 @@ async def testWrapper():
     async for token in testDendrite():
         bt.logging.info(token)
 
+
 class Server(uvicorn.Server):
     def install_signal_handlers(self):
         pass
@@ -198,6 +205,7 @@ class Server(uvicorn.Server):
             self.should_exit = True
             thread.join()
 
+
 if __name__ == "__main__":
     bt.logging.on()
     bt.logging.set_debug(True)
@@ -214,7 +222,9 @@ if __name__ == "__main__":
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Proxy")
-    config = uvicorn.Config(app,loop='asyncio', host="0.0.0.0", port=int(os.getenv('PROXY_PORT', 8081)))
+    config = uvicorn.Config(
+        app, loop="asyncio", host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081))
+    )
     server = Server(config=config)
     with server.run_in_thread():
         try:
@@ -222,4 +232,4 @@ if __name__ == "__main__":
                 time.sleep(10)
         except Exception:
             pass
-    bt.logging.info('shutting down')
+    bt.logging.info("shutting down")

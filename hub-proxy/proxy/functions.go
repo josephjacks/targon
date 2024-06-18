@@ -123,13 +123,13 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody) {
 		c.Err.Printf("Failed to JSON Unmarshal: %s\n", err.Error())
 		return
 	}
-	sources := []string{"google.com"}
-	formatted := hashString(formatListToPythonString(sources))
-	prompt := hashString(buildPrompt(req.Messages))
+	sources := []string{}
+	formattedSourcesList := formatListToPythonString(sources)
+	prompt := buildPrompt(req.Messages)
 
 	var hashes []string
-	hashes = append(hashes, formatted)
-	hashes = append(hashes, prompt)
+	hashes = append(hashes, hashString(formattedSourcesList))
+	hashes = append(hashes, hashString(prompt))
 	bodyHash := hashString(strings.Join(hashes, ""))
 
 	type Response struct {

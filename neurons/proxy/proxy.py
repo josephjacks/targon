@@ -115,7 +115,6 @@ async def safeParseAndCall(req: Request):
             token_count = 0
             uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
             res = ""
-            yield {"event": "new_token", "data": "FIRST TOKEN"}
             async for token in await dendrite(
                 metagraph_controller.metagraph.axons[uid],
                 synapse,
@@ -140,10 +139,7 @@ async def safeParseAndCall(req: Request):
         except Exception as e:
             bt.logging.error(e)
 
-    async for token in api_chat_completions(
-        prompt,
-        protocol.InferenceSamplingParams(max_new_tokens=data.get("max_tokens", 1024)),
-    ):
+    async for token in testDendrite():
         bt.logging.info(token)
     return ""
     return EventSourceResponse(
@@ -219,6 +215,7 @@ if __name__ == "__main__":
     metagraph_controller.start_sync_thread()
     while metagraph_controller.metagraph is None:
         sleep(1)
+    asyncio.run(testWrapper())
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Proxy")

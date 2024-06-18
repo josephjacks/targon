@@ -131,7 +131,7 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody, wg *sync.Wai
 	hashes = append(hashes, hashString(formattedSourcesList))
 	hashes = append(hashes, hashString(prompt))
 	bodyHash := hashString(strings.Join(hashes, ""))
-	c.Info.Printf("Prompt: %s, sources: %s", prompt, sources)
+	c.Info.Printf("Prompt: %s\nsources: %s\ntokens: %d", prompt, sources, req.MaxTokens)
 
 	type Response struct {
 		Res     *http.Response

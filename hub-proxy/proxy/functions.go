@@ -106,7 +106,8 @@ func buildPrompt(messages []RequestBodyMessages) string {
 	return prompt
 }
 
-func queryMiners(c *Context, client *redis.Client, req RequestBody) {
+func queryMiners(c *Context, client *redis.Client, req RequestBody, wg *sync.WaitGroup) {
+	defer wg.Done()
 	ctx := context.Background()
 	defer ctx.Done()
 	rh := rejson.NewReJSONHandler()
@@ -253,15 +254,6 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody) {
 				}
 				return
 			}
-
-			if res.StatusCode == http.StatusOK {
-				bdy, _ := io.ReadAll(res.Body)
-				res.Body.Close()
-				c.Warn.Printf("Miner: %s %s\nError: %s\n", miner.Hotkey, miner.Coldkey, string(bdy))
-				return
-			}
-
-
 
 			if res.StatusCode != http.StatusOK {
 				bdy, _ := io.ReadAll(res.Body)

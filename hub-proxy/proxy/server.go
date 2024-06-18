@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/aidarkhanov/nanoid"
 	_ "github.com/go-sql-driver/mysql"
@@ -93,7 +94,11 @@ func main() {
 		c.Response().Header().Set("Connection", "keep-alive")
 		c.Response().Header().Set("X-Accel-Buffering", "no")
 
-		queryMiners(cc, client, req)
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go queryMiners(cc, client, req, &wg)
+		wg.Wait()
 		return c.String(200, "")
 	})
 	e.Logger.Fatal(e.Start(":80"))

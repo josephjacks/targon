@@ -205,7 +205,7 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody, wg *sync.Wai
 					DecoderInputDetails: true,
 					Details:             false,
 					DoSample:            true,
-					MaxNewTokens:        req.MaxTokens,
+					MaxNewTokens:        3072,
 					RepetitionPenalty:   1.0,
 					ReturnFullText:      false,
 					Stop:                []string{"photographer"},

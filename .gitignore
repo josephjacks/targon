@@ -5,5 +5,6 @@ test_stream.py
 .env
 
 docker-compose.yml
+!hub-proxy/docker-compose.yml
 .DS_Store
 

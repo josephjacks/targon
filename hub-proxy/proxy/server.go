@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"sync"
 
 	"github.com/aidarkhanov/nanoid"
 	_ "github.com/go-sql-driver/mysql"
@@ -96,10 +95,7 @@ func main() {
 
 
 		cc.Info.Printf("/api/chat/completions\n")
-		var wg sync.WaitGroup
-		wg.Add(1)
-		go queryMiners(cc, client, req, &wg)
-		wg.Wait()
+		queryMiners(cc, client, req)
 		return c.String(200, "")
 	})
 	e.Logger.Fatal(e.Start(":80"))

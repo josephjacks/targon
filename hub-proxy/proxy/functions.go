@@ -106,8 +106,7 @@ func buildPrompt(messages []RequestBodyMessages) string {
 	return prompt
 }
 
-func queryMiners(c *Context, client *redis.Client, req RequestBody, wg *sync.WaitGroup) {
-	defer wg.Done()
+func queryMiners(c *Context, client *redis.Client, req RequestBody) {
 	ctx := context.Background()
 	defer ctx.Done()
 	rh := rejson.NewReJSONHandler()

@@ -253,6 +253,16 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody) {
 				}
 				return
 			}
+
+			if res.StatusCode == http.StatusOK {
+				bdy, _ := io.ReadAll(res.Body)
+				res.Body.Close()
+				c.Warn.Printf("Miner: %s %s\nError: %s\n", miner.Hotkey, miner.Coldkey, string(bdy))
+				return
+			}
+
+
+
 			if res.StatusCode != http.StatusOK {
 				bdy, _ := io.ReadAll(res.Body)
 				res.Body.Close()

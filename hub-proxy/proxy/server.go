@@ -75,7 +75,7 @@ func main() {
 	})
 	var err error
 	defer client.Close()
-	e.POST("/api/chat/completions/", func(c echo.Context) error {
+	e.POST("/api/chat/completions", func(c echo.Context) error {
 		cc := c.(*Context)
 		cc.Request().Header.Add("Content-Type", "application/json")
 		var req RequestBody

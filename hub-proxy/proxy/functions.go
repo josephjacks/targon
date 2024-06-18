@@ -127,11 +127,11 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody, wg *sync.Wai
 	sources := []string{"https://google.com"}
 	formattedSourcesList := formatListToPythonString(sources)
 	prompt := buildPrompt(req.Messages)
-
 	var hashes []string
 	hashes = append(hashes, hashString(formattedSourcesList))
 	hashes = append(hashes, hashString(prompt))
 	bodyHash := hashString(strings.Join(hashes, ""))
+	c.Info.Printf("Prompt: %s, sources: %s", prompt, sources)
 
 	type Response struct {
 		Res     *http.Response

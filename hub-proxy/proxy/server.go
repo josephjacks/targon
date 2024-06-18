@@ -95,6 +95,7 @@ func main() {
 		c.Response().Header().Set("X-Accel-Buffering", "no")
 
 
+		cc.Info.Printf("/api/chat/completions\n")
 		var wg sync.WaitGroup
 		wg.Add(1)
 		go queryMiners(cc, client, req, &wg)

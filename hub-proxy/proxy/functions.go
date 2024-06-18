@@ -123,7 +123,7 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody) {
 		c.Err.Printf("Failed to JSON Unmarshal: %s\n", err.Error())
 		return
 	}
-	sources := []string{}
+	sources := []string{"https://google.com"}
 	formattedSourcesList := formatListToPythonString(sources)
 	prompt := buildPrompt(req.Messages)
 

@@ -244,6 +244,7 @@ func queryMiners(c *Context, client *redis.Client, req RequestBody) {
 			r.Header["header_size"] = []string{"0"}
 			r.Header["total_size"] = []string{"0"}
 			r.Header["computed_body_hash"] = []string{bodyHash}
+			r.Header.Add("Accept-Encoding", "identity")
 			res, err := httpClient.Do(r)
 			if err != nil {
 				c.Warn.Printf("Miner: %s %s\nError: %s\n", miner.Hotkey, miner.Coldkey, err.Error())

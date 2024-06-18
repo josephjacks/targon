@@ -12,7 +12,7 @@ services:
       context: ./proxy
     restart: always
     depends_on:
-      uid-cacher:
+      cache:
         condition: service_healthy
 
   uid-cacher:

@@ -51,6 +51,7 @@ func main() {
 	HUB_SECRET_TOKEN = safeEnv("HUB_SECRET_TOKEN")
 	INSTANCE_UUID = uuid.New().String()
 	debug, present := os.LookupEnv("DEBUG")
+
 	if !present {
 		DEBUG = false
 	} else {

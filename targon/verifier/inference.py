@@ -28,10 +28,10 @@ import bittensor as bt
 
 from targon import protocol
 from targon.utils.prompt import create_prompt
+from targon.constants import CHALLENGE_FAILURE_REWARD
 from targon.verifier.uids import get_random_uids
 from targon.verifier.reward import hashing_function
 from targon.verifier.state import EventSchema
-import numpy as np
 
 
 # get highest incentive axons from metagraph
@@ -47,7 +47,7 @@ def select_highest_n_peers(n: int, metagraph=None, return_all=False):
     """
     assert metagraph is not None, "metagraph is None"
     # Get the top n indices based on incentive
-    indices = np.argsort(metagraph.incentive)[-n:][::-1]
+    indices = torch.topk(metagraph.incentive, n).indices
 
     # Get the corresponding uids
     uids_with_highest_incentives = metagraph.uids[indices].tolist()

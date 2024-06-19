@@ -31,44 +31,12 @@ from targon.verifier.inference import api_chat_completions
 from targon.verifier.uids import check_uid_availability
 from fastapi import Request
 from sse_starlette.sse import EventSourceResponse
-from dotenv import load_dotenv
-
-load_dotenv()
-TOKEN = os.getenv("HUB_SECRET_TOKEN")
 
 
 class Verifier(BaseVerifierNeuron):
     """
     Text prompt verifier neuron.
     """
-
-    async def safeParseAndCall(self, req: Request):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        data = await req.json()
-        if data.get("api_key") != TOKEN and TOKEN is not None:
-            return "", 401
-
-        bt.logging.info("Received organic request")
-        messages = data.get("messages")
-        if not isinstance(messages, list):
-            return "", 403
-        prompt = "\n".join([p["role"] + ": " + p["content"] for p in messages])
-
-        try:
-            return EventSourceResponse(
-                api_chat_completions(
-                    self,
-                    prompt,
-                    protocol.InferenceSamplingParams(
-                        max_new_tokens=data.get("max_tokens", 1024)
-                    ),
-                ),
-                media_type="text/event-stream",
-            )
-        except Exception as e:
-            bt.logging.error(f"Failed due to: {e}")
-            return "", 500
 
     def __init__(self, config=None):
         super(Verifier, self).__init__(config=config)
@@ -84,13 +52,8 @@ class Verifier(BaseVerifierNeuron):
                     self.metagraph, i, self.config.neuron.vpermit_tao_limit
                 )
 
-        # inference client
-        # --- Block
-        if self.config.neuron.api_proxy and TOKEN is not None:
+        if self.config.neuron.api_proxy:
             self.app = FastAPI()
-            self.app.router.add_api_route(
-                "/api/chat/completions", self.safeParseAndCall, methods=["POST"]
-            )
             self.app.router.add_api_route(
                 "/api/stats", self.stats, methods=["GET"]
             )

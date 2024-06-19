@@ -176,4 +176,4 @@ if __name__ == "__main__":
     app = FastAPI()
     app.include_router(router)
     bt.logging.info("Starting Proxy")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081)))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8080)))

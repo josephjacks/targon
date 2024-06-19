@@ -1,5 +1,13 @@
 package main
 
+import "net/http"
+
+type MinerResponse struct {
+	Res     *http.Response
+	ColdKey string
+	HotKey  string
+}
+
 type RequestBodyMessages struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`

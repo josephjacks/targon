@@ -96,8 +96,8 @@ func main() {
 
 
 		cc.Info.Printf("/api/chat/completions\n")
-		queryMiners(cc, client, req)
-		return c.String(200, "")
+		res := queryMiners(cc, req)
+		return c.String(res, "")
 	})
 	e.Logger.Fatal(e.Start(":80"))
 }

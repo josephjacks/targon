@@ -91,6 +91,9 @@ class Verifier(BaseVerifierNeuron):
             self.app.router.add_api_route(
                 "/api/chat/completions", self.safeParseAndCall, methods=["POST"]
             )
+            self.app.router.add_api_route(
+                "/api/stats", self.stats, methods=["GET"]
+            )
             self.fast_config = uvicorn.Config(
                 self.app,
                 host="0.0.0.0",
@@ -103,6 +106,7 @@ class Verifier(BaseVerifierNeuron):
         self.last_interval_block = self.get_last_adjustment_block()
         self.adjustment_interval = self.get_adjustment_interval()
         self.next_adjustment_block = self.last_interval_block + self.adjustment_interval
+
 
     async def forward(self):
         """

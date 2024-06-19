@@ -161,6 +161,14 @@ class BaseVerifierNeuron(BaseNeuron):
             return block
 
 
+    async def stats(self):
+        return {
+            "max_tokens_per_second": self.max_tokens_per_second,
+            "min_tokens_per_second": self.min_tokens_per_second,
+            "range_tokens_per_second": self.range_tokens_per_second,
+            "average_tokens_per_second": self.average_tokens_per_second
+        }
+
     def serve_axon(self):
         """Serve axon to enable external connections."""
 

@@ -143,7 +143,7 @@ async def safeParseAndCall(req: Request):
                 max_new_tokens=int(data.get("max_tokens", 1024))
             ),
         ),
-        media_type="text/event-stream",
+        media_type="text/plain",
     )
 
 

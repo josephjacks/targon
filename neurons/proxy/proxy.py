@@ -89,46 +89,63 @@ async def safeParseAndCall(req: Request):
     data = await req.json()
     if data.get("api_key") != TOKEN and TOKEN is not None:
         bt.logging.warning("Unverified request")
-        return
+        return "", 401
 
     bt.logging.info("Received organic request")
     messages = data.get("messages")
     if not isinstance(messages, list):
-        return 
+        return "", 403
     prompt = "\n".join([p["role"] + ": " + p["content"] for p in messages])
 
-    synapse = protocol.Inference(
-        sources=[],
-        query=prompt,
-        sampling_params=protocol.InferenceSamplingParams(
-            max_new_tokens=1024,
-        ),
-    )
-
-    start_time = time.time()
-    token_count = 0
-    uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
-    res = ""
-    async for token in await dendrite(
-        metagraph_controller.metagraph.axons[uid],
-        synapse,
-        deserialize=False,
-        streaming=True,
+    async def api_chat_completions(
+        prompt: str,
+        sampling_params: protocol.InferenceSamplingParams,
     ):
-        if isinstance(token, list):
-            res += token[0]
-            bt.logging.info(f"token: {token[0]}")
-            yield token[0]
-        elif isinstance(token, str):
-            res += token
-            bt.logging.info(f"token: {token}")
-            yield token
-        token_count += 1
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    tokens_per_second = token_count / elapsed_time
-    bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
-    bt.logging.info(f"{res} | {token_count}")
+        try:
+            synapse = protocol.Inference(
+                sources=[],
+                query=prompt,
+                sampling_params=sampling_params,
+            )
+
+            start_time = time.time()
+            token_count = 0
+            uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
+            res = ""
+            yield f"event: new_token\ndata: first token\n\n"
+            async for token in await dendrite(
+                metagraph_controller.metagraph.axons[uid],
+                synapse,
+                deserialize=False,
+                streaming=True,
+            ):
+                if isinstance(token, list):
+                    res += token[0]
+                    bt.logging.info(f"token: {token[0]}")
+                    yield f"event: new_token\ndata: bla\n\n"
+                elif isinstance(token, str):
+                    res += token
+                    bt.logging.info(f"token: {token}")
+                    yield f"event: new_token\ndata: bla\n\n"
+                token_count += 1
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            tokens_per_second = token_count / elapsed_time
+            bt.logging.info(f"Token generation rate: {tokens_per_second} tokens/second")
+            bt.logging.info(f"{res} | {token_count}")
+        except Exception as e:
+            bt.logging.error(e)
+
+    return responses.StreamingResponse(
+        api_chat_completions(
+            prompt,
+            protocol.InferenceSamplingParams(
+                max_new_tokens=int(data.get("max_tokens", 1024))
+            ),
+        ),
+        media_type="text/event-stream",
+    )
 
 
 async def testDendrite():
@@ -150,14 +167,10 @@ async def testDendrite():
     ):
         if isinstance(token, list):
             res += token[0]
-            yield token[0]
         elif isinstance(token, str):
             res += token
-            yield token
+    bt.logging.info(res)
 
-async def testWrapper():
-    async for token in testDendrite():
-        bt.logging.info(token)
 
 if __name__ == "__main__":
     bt.logging.on()
@@ -171,9 +184,8 @@ if __name__ == "__main__":
     metagraph_controller = MetagraphController(netuid=4)
     metagraph_controller.start_sync_thread()
     while metagraph_controller.metagraph is None:
-        sleep(1)
-    res = asyncio.run(testWrapper())
+        sleep(.1)
     app = FastAPI()
     app.include_router(router)
-    bt.logging.info("Starting Proxy")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8080)))
+    bt.logging.info("Starting Prxy")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081)))

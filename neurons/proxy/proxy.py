@@ -112,7 +112,6 @@ async def safeParseAndCall(req: Request):
             token_count = 0
             uid = select_highest_n_peers(1, metagraph_controller.metagraph)[0]
             res = ""
-            yield f"event: new_token\ndata: first token\n\n"
             async for token in await dendrite(
                 metagraph_controller.metagraph.axons[uid],
                 synapse,
@@ -171,6 +170,11 @@ async def testDendrite():
             res += token
     bt.logging.info(res)
 
+async def main():
+    app = FastAPI()
+    app.include_router(router)
+    bt.logging.info("Starting Prxy")
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081)))
 
 if __name__ == "__main__":
     bt.logging.on()
@@ -185,7 +189,4 @@ if __name__ == "__main__":
     metagraph_controller.start_sync_thread()
     while metagraph_controller.metagraph is None:
         sleep(.1)
-    app = FastAPI()
-    app.include_router(router)
-    bt.logging.info("Starting Prxy")
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PROXY_PORT", 8081)))
+    asyncio.run(main())

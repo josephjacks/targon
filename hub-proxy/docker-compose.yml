@@ -32,6 +32,21 @@ services:
     volumes: 
       - cache:/data
 
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data 
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+
   traefik:
     image: traefik:v2.3
     ports:
@@ -45,5 +60,6 @@ services:
 
 volumes:
   traefik-public-certificates:
+  pgdata:
   cache:
     driver: local

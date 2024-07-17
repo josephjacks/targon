@@ -278,8 +278,10 @@ In the entrypoint.sh, please replace the wallet name and hotkey with your own. I
 ```bash
 python3 app.py --wallet.name WALLET_NAME --wallet.hotkey WALLET_HOTKEY --logging.trace --subtensor.chain_endpoint ws://0.0.0.0:9944
 ```
-NOTE: Trace logging is very verbose. You can use `--logging.debug` instead for less log bloat.
+  
+replace the wallet name and wallet hotkey with your wallet name and wallet hotkey. You can also change the subtensor chain endpoint to your own chain endpoint if you prefer.
 
+NOTE: Trace logging is very verbose. You can use `--logging.debug` instead for less log bloat.
 </details>
 
 
@@ -296,6 +298,9 @@ Please replace the wallet name and hotkey with your own. If you prefer, you can 
 cd neurons/prover
 pm2 start app.py --name prover --interpreter python3 -- --wallet.name WALLET_NAME --wallet.hotkey WALLET_HOTKEY --logging.trace --subtensor.chain_endpoint 0.0.0.0:9944
 ```
+
+replace the wallet name and wallet hotkey with your wallet name and wallet hotkey. You can also change the subtensor chain endpoint to your own chain endpoint if you prefer.
+
 NOTE: Trace logging is very verbose. You can use `--logging.debug` instead for less log bloat.
 
 </details>
@@ -375,7 +380,7 @@ and then edit the entrypoint.sh file to include the args specific for your prove
 python3 app.py --wallet.name WALLET_NAME --wallet.hotkey WALLET_HOTKEY --logging.debug --logging.trace --subtensor.chain_endpoint 0.0.0.0:9944 --database.password YOUR_PASSWORD_HERE
 ```
 
-replace the wallet name, wallet hotkey, and db pass with your wallet name, wallet hotkey and pass. You can also change the subtensor chain endpoint to your own chain endpoint if you perfer.
+replace the wallet name, wallet hotkey, and db pass with your wallet name, wallet hotkey and pass. You can also change the subtensor chain endpoint to your own chain endpoint if you prefer.
 
 </details>
 
@@ -423,7 +428,7 @@ These options can be used to customize the behavior of the verifier when it is r
 Refer to the code here:
 
 
-replace the wallet name and wallet hotkey with your wallet name and wallet hotkey. You can also change the subtensor chain endpoint to your own chain endpoint if you perfer.
+replace the wallet name and wallet hotkey with your wallet name and wallet hotkey. You can also change the subtensor chain endpoint to your own chain endpoint if you prefer.
 
 </details>
 

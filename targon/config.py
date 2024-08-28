@@ -51,26 +51,17 @@ def add_args(parser):
         help="The default epoch length (how often we set weights, measured in 12 second blocks).",
         default=360,
     )
-
     parser.add_argument(
         "--mock",
         action="store_true",
         help="Mock neuron and all network components.",
         default=False,
     )
-
     parser.add_argument(
         "--neuron.model_endpoint",
         type=str,
         help="The endpoint to use for the OpenAI Compatible client.",
         default="http://127.0.0.1:8000/v1",
-    )
-
-    parser.add_argument(
-        "--neuron.model_name",
-        type=str,
-        help="The name of the model used for completion",
-        default="NousResearch/Meta-Llama-3.1-8B-Instruct",
     )
     parser.add_argument(
         "--neuron.api_key",

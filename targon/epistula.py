@@ -16,7 +16,7 @@ def generate_header(
     signed_for: Optional[str] = None,
 ) -> Dict[str, Any]:
     timestamp = round(time.time() * 1000)
-    timestampInterval = ceil(timestamp / 1e4) * 1e4
+    timestampInterval = ceil(timestamp / 1e4)
     uuid = str(uuid4())
     headers = {
         "Epistula-Version": str(2),
@@ -95,7 +95,6 @@ def epistula_verify_v2(
     if timestamp + ALLOWED_DELTA_MS < now:
         return "Request is too stale"
     message = f"{sha256(body).hexdigest()}.{uuid}.{timestamp}.{signed_for}"
-    print(message)
     verified = keypair.verify(message, signature)
     if not verified:
         return "Signature Mismatch"

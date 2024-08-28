@@ -27,7 +27,6 @@ from nanoid import generate
 
 from typing import Any, Dict, List, Optional, Tuple
 from targon import (
-    protocol,
     __version__,
     __spec_version__ as spec_version,
 )
@@ -110,7 +109,7 @@ class Validator(BaseNeuron):
             bt.logging.error(f"Failed to initialize organics database: {e}")
 
     async def send_stats_to_ingestor(
-        self, stats, sampling_params, messages, ground_truth
+        self, stats, request, ground_truth
     ):
         try:
             r_nanoid = generate(size=48)
@@ -125,12 +124,14 @@ class Validator(BaseNeuron):
                 for uid, stat in stats
             ]
             request = {
-                    "r_nanoid": r_nanoid,
-                    "block": self.subtensor.block,
-                    "sampling_params": json.dumps(sampling_params.model_dump()),
-                    "ground_truth": json.dumps({"ground_truth": ground_truth, "messages": messages}),
-                    "version": spec_version,
-                    "hotkey": self.wallet.hotkey.ss58_address,
+                "r_nanoid": r_nanoid,
+                "block": self.subtensor.block,
+                "sampling_params": json.dumps(request.model_dump()),
+                "ground_truth": json.dumps(
+                    {"ground_truth": ground_truth}
+                ),
+                "version": spec_version,
+                "hotkey": self.wallet.hotkey.ss58_address,
             }
             # Prepare the data
             body = {
@@ -156,7 +157,7 @@ class Validator(BaseNeuron):
             bt.logging.error(traceback.format_exc())
 
     async def handle_inference(
-        self, messages, sampling_params, uid: int, ground_truth: str
+        self, request, uid: int, ground_truth: str
     ):
         assert self.config.neuron
         stats = InferenceStats(
@@ -169,10 +170,6 @@ class Validator(BaseNeuron):
             jaros=[],
         )
         try:
-            req = protocol.Inference(
-                messages=messages,
-                sampling_params=sampling_params,
-            )
             response_tokens = []
             token_count = 0
             start_send_message_time = time.time()
@@ -180,14 +177,13 @@ class Validator(BaseNeuron):
             start_token_time = 0
 
             axon_info = self.metagraph.axons[uid]
-            body = req.model_dump()
-            headers = generate_header(self.wallet.hotkey, body, axon_info.hotkey)
+            headers = generate_header(self.wallet.hotkey, request, axon_info.hotkey)
             try:
                 async with aiohttp.ClientSession() as session:
                     async with session.post(
                         url=f"http://{axon_info.ip}:{axon_info.port}/inference",
                         headers=headers,
-                        json=body,
+                        json=request,
                         timeout=12,
                     ) as r:
                         if r.status != 200:
@@ -246,24 +242,16 @@ class Validator(BaseNeuron):
             bt.logging.error(f"Failed writing to cache file: {e}")
             bt.logging.error(traceback.format_exc())
 
-    def generate_ground_truth(self, messages, sampling_params):
-        assert self.config.neuron
-        res = self.client.chat.completions.create(
-            model=self.config.neuron.model_name,
-            messages=messages,
-            stream=False,
-            temperature=sampling_params.temperature,
-            top_p=sampling_params.top_p,
-            seed=sampling_params.seed,
-            max_tokens=sampling_params.max_new_tokens,
-        )
+    def generate_ground_truth(self, request):
+        request["stream"] = False
+        res = self.client.chat.completions.create(**request)
         return res.choices[0].message.content
 
     async def query_miners(self, miner_uids):
         assert self.config.database
         try:
-            messages, sampling_params = self.generate_question()
-            ground_truth = self.generate_ground_truth(messages, sampling_params)
+            request = self.generate_request()
+            ground_truth = self.generate_ground_truth(request)
             if ground_truth is None:
                 bt.logging.error("Failed to generate ground truth")
                 return
@@ -284,7 +272,7 @@ class Validator(BaseNeuron):
         for uid in miner_uids:
             tasks.append(
                 asyncio.create_task(
-                    self.handle_inference(messages, sampling_params, uid, ground_truth)
+                    self.handle_inference(request, uid, ground_truth)
                 )
             )
         stats: List[Tuple[int, InferenceStats]] = await asyncio.gather(*tasks)
@@ -299,8 +287,7 @@ class Validator(BaseNeuron):
 
         return (
             stats,
-            sampling_params,
-            messages,
+            request,
             ground_truth,
         )
 
@@ -324,15 +311,16 @@ WHERE scored=FALSE AND created_at >= (NOW() - INTERVAL '30 minutes') LIMIT 5"""
                         self.miner_wps[uid].extend([None] * 3)
                         bt.logging.info(f"Organic: {uid} failed req completely")
                         continue
-
-                    sampling_params = protocol.InferenceSamplingParams(
-                        seed=5688697,
-                        temperature=0.01,
-                        top_p=0.98,
-                        max_new_tokens=row["max_tokens"],
-                    )
-                    messages = json.loads(row["messages"])
-                    ground_truth = self.generate_ground_truth(messages, sampling_params)
+                    request= {
+                        "model": "NousResearch/Meta-Llama-3.1-8B-Instruct",
+                        "messages": json.loads(row["messages"]),
+                        "stream": False,
+                        "temperature": 0.01,
+                        "top_p": 0.998,
+                        "seed": 5688697,
+                        "max_tokens": row["max_tokens"],
+                    }
+                    ground_truth = self.generate_ground_truth(request)
                     if ground_truth is None:
                         continue
 
@@ -462,33 +450,21 @@ WHERE scored=FALSE AND created_at >= (NOW() - INTERVAL '30 minutes') LIMIT 5"""
             bt.logging.info("Closing organics db connection")
             self.loop.run_until_complete(self.db_organics.close())
 
-    def generate_question(self):
+    def generate_request(self):
         assert self.config.neuron
         # Generate a random seed for reproducibility in sampling and text generation
         random.seed(urandom(100))
         seed = random.randint(10000, 10000000)
-
-        # Determine the maximum number of new tokens to generate
-        max_new_tokens = random.randint(1024, 1024 * 7)
-
-        # Create sampling parameters using the generated seed and token limit
-        sampling_params = protocol.InferenceSamplingParams(
-            seed=seed, max_new_tokens=max_new_tokens
-        )
-
         random_row_text = self.dataset.sample(n=1)["conversations"].iloc[0][0]["value"]
-        # Generate a query from the sampled text and perform text generation
-        messages = create_query_prompt(random_row_text)
-
+        model = "NousResearch/Meta-Llama-3.1-8B-Instruct"
         # If this fails, it gets caught in the same try/catch as ground truth generation
         res = self.client.chat.completions.create(
-            model=self.config.neuron.model_name,
-            messages=messages,
+            model=model,
+            messages=create_query_prompt(random_row_text),
             stream=False,
             temperature=0.5,
-            top_p=sampling_params.top_p,
-            seed=sampling_params.seed,
-            max_tokens=random.randint(16, 64),
+            top_p=0.998,
+            max_tokens=random.randint(64, 128),
         )
 
         # Create a final search prompt using the query and sources
@@ -496,9 +472,17 @@ WHERE scored=FALSE AND created_at >= (NOW() - INTERVAL '30 minutes') LIMIT 5"""
         if completion is None:
             print(res)
             raise Exception("No completion")
-        prompt = create_search_prompt(completion, increase_entropy=True)
-
-        return prompt, sampling_params
+        prompt = create_search_prompt(completion)
+        return {
+            "model": model,
+            "messages": prompt,
+            "stream": True,
+            "temperature": 0.01,
+            "top_p": 0.998,
+            "seed": seed,
+            "max_tokens": random.randint(1024, 1024 * 7),
+            "timeout": 5,
+        }
 
     def get_weights(self) -> Tuple[List[int], List[float]]:
         wps = {

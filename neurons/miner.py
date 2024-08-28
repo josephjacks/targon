@@ -15,7 +15,6 @@ import uvicorn
 import bittensor as bt
 
 from bittensor.axon import FastAPIThreadedServer
-from targon.protocol import Inference
 
 
 class Miner(BaseNeuron):
@@ -38,29 +37,22 @@ class Miner(BaseNeuron):
             "\N{grinning face with smiling eyes}", "Successfully Initialized!"
         )
 
-    async def inference(self, request: Inference):
+    async def inference(self, request: Request):
         bt.logging.info("\u2713", "Getting Inference request!")
 
-        async def stream(req: Inference):
+        async def stream(req):
             assert self.config.neuron
             assert req.sampling_params
             stream = self.client.chat.completions.create(
-                model=self.config.neuron.model_name,
-                messages=req.messages,
-                stream=True,
-                temperature=req.sampling_params.temperature,
-                top_p=req.sampling_params.top_p,
-                seed=req.sampling_params.seed,
-                timeout=5,
-                max_tokens=req.sampling_params.max_new_tokens,
+                    **req
             )
             for chunk in stream:
                 token = chunk.choices[0].delta.content
                 if token:
                     yield token.encode("utf-8")
             bt.logging.info("\N{grinning face}", "Processed forward")
-
-        return StreamingResponse(stream(request))
+        req = await request.json()
+        return StreamingResponse(stream(req))
 
     async def verify_request(self, request: Request):
         params = [request, self.wallet.hotkey.ss58_address, self.metagraph.hotkeys]
